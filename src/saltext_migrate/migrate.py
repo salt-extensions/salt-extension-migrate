@@ -368,7 +368,7 @@ class ExtensionMigrate:
 
             if not Path(".git/filter-repo/analysis/path-all-sizes.txt").exists():
                 status(
-                    "Did not find existing `filter-repo --analyze` output. Renerating..."
+                    "Did not find existing `filter-repo --analyze` output. Regenerating..."
                 )
                 git("filter-repo", "--analyze")
             git("switch", "-c", "filter-source")
