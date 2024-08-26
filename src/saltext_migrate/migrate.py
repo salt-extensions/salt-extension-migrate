@@ -454,6 +454,11 @@ class ExtensionMigrate:
                 )
             except ProcessExecutionError:
                 git("rebase", "--abort")
+            finally:
+                try:
+                    git("rebase", "--abort")
+                except ProcessExecutionError:
+                    pass
             if not_deleted := list(self.salt_path.glob("**/*.py")):
                 if not self.non_interactive and not ask_yn(
                     "Need to reset to before the great module purge."
