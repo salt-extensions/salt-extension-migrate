@@ -523,14 +523,14 @@ class ExtensionMigrate:
 
         if res.dunder_utils_res.missed_critical:
             warn(
-                "✗ Fix REQUIRED:",
+                "✗ Fix REQUIRED (https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#utils-from-salt-extension-utils):",
                 "The following Salt core utils mods require to be "
                 "called via __utils__, which does not work from Saltext utils:\n"
                 + render_dict_list(res.dunder_utils_res.missed_critical_mods),
             )
         if res.dunder_utils_res.rewrite_mods:
             warn(
-                "✗ Fix REQUIRED:",
+                "✗ Fix REQUIRED (https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#utils-into-salt-extension-utils):",
                 "The following local utils mods required to be "
                 "called via __utils__, which does not work for Saltext utils. "
                 "Calls were rewritten partly, but you need to refactor the module "
@@ -539,7 +539,7 @@ class ExtensionMigrate:
             )
         if res.dunder_utils_res.missed:
             warn(
-                "? Fix recommended:",
+                "? Fix recommended (https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#utils-from-other-salt-extension-modules):",
                 "The following Salt core utils mods require to be "
                 "called via __utils__, calls cannot be rewritten. Consider creating a PR:\n"
                 + render_dict_list(res.dunder_utils_res.missed_mods),
@@ -631,6 +631,8 @@ class ExtensionMigrate:
             if (
                 new_name in res.dunder_utils_res.missed_critical
                 or new_name in res.dunder_utils_res.rewrite
+                or ".".join(new_name.with_suffix("").parts[1:])
+                in res.dunder_utils_res.rewrite_mods
             ):
                 warn = True
                 text += " (* Action required)"
@@ -648,7 +650,8 @@ class ExtensionMigrate:
             if res.dunder_utils_res.missed_critical:
                 summary(
                     "\n  * Ensure the following Salt-internal utils modules don't "
-                    "rely on global dunders and/or migrate them and change them locally:\n"
+                    "rely on global dunders and/or migrate them and change them locally "
+                    "(https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#utils-from-salt-extension-utils):\n"
                     + render_list(res.dunder_utils_res.missed_mods, indent=4),
                     warn=True,
                 )
@@ -656,8 +659,15 @@ class ExtensionMigrate:
             if res.dunder_utils_res.rewrite:
                 summary(
                     "\n  * Rewrite the following migrated utils modules to not rely "
-                    "on global dunders:\n"
-                    + render_list(res.dunder_utils_res.rewrite, indent=4),
+                    "on global dunders:"
+                    "(https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#utils-into-salt-extension-utils)\n"
+                    + render_list(
+                        (
+                            f"src/{mod.replace('.', '/')}.py"
+                            for mod in res.dunder_utils_res.rewrite_mods
+                        ),
+                        indent=4,
+                    ),
                     warn=True,
                 )
                 summary(
@@ -681,7 +691,8 @@ class ExtensionMigrate:
                 next_steps.append("Fix pre-commit hooks")
             if res.non_pytests_after_migration:
                 summary(
-                    "\n  * Migrate the following non-pytest tests or skip them temporarily:\n"
+                    "\n  * Migrate the following non-pytest tests or skip them temporarily "
+                    "(https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#pre-pytest-tests):\n"
                     + render_list(sorted(res.non_pytests_after_migration), indent=4),
                     warn=True,
                 )
@@ -691,7 +702,8 @@ class ExtensionMigrate:
             "Ensure tests are passing: `nox -e tests-3`",
             "Ensure docs are building: `nox -e docs`",
             "Commit the repo: `git add . && git commit -m 'Initial extension layout'`",
-            "Apply for a new repository in the `salt-extensions` org (optional)",
+            "Apply for a new repository in the `salt-extensions` org "
+            "(optional: https://github.com/salt-extensions/community/issues/new)",
         ]
         summary(">> Next steps", title=True)
         summary(render_list(next_steps))
