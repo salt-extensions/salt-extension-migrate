@@ -23,6 +23,10 @@ from .rewrite import (
 
 RECOMMENDED_PYVER = "3.10"
 
+PRE_COMMIT_TEST_REGEX = re.compile(
+    r"^(?P<test>[^\n]+?)\.{4,}.*(?P<resolution>Failed|Passed|Skipped)$"
+)
+
 
 class TargetPathExists(ValueError):
     """
@@ -79,6 +83,29 @@ def summary(msg, warn=False, title=False, main_title=False):
     else:
         style = ""
     questionary.print(msg, style=style)
+
+
+def parse_pre_commit(data):
+    passing = []
+    failing = {}
+    cur = None
+    for line in data.splitlines():
+        if match := PRE_COMMIT_TEST_REGEX.match(line):
+            cur = None
+            if match.group("resolution") != "Failed":
+                passing.append(match.group("test"))
+                continue
+            cur = match.group("test")
+            failing[cur] = []
+            continue
+        try:
+            failing[cur].append(line)
+        except KeyError:
+            # in case the parsing logic fails, let's not crash everything
+            continue
+    return passing, {
+        test: "\n".join(output).strip() for test, output in failing.items()
+    }
 
 
 @dataclass
@@ -621,14 +648,13 @@ class ExtensionMigrate:
         try:
             _run_pre_commit_loop(2)
         except ProcessExecutionError as err:
-            issues = re.split(r"\.{3,}Failed", err.stdout)
-            hook_cnt = len(issues) - 1
-            warn(f"Pre-commit is failing. Please fix all ({hook_cnt}) failing hooks")
-            for cnt in range(hook_cnt):
-                failing_hook = issues[cnt].splitlines()[-1]
-                failing_output = "\n".join(issues[cnt + 1].splitlines()[:-1])
-                warn(f"✗ Failing hook ({cnt + 1}): {failing_hook}", failing_output)
-                res.failing_hooks[failing_hook] = failing_output
+            _, failing = parse_pre_commit(err.stdout)
+            warn(
+                f"Pre-commit is failing. Please fix all ({len(failing)}) failing hooks"
+            )
+            for i, failing_hook in enumerate(failing):
+                warn(f"✗ Failing hook ({i + 1}): {failing_hook}", failing[failing_hook])
+            res.failing_hooks = failing
 
     def _run_in_venv(self, command, *args, force_non_interactive=False):
         with local.cwd(self.saltext_path):
