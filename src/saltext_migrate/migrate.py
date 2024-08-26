@@ -122,9 +122,19 @@ class Migration:
                 # additionally drop `cloud`
                 new_path = Path("tests", path.parts[2], *path.parts[4:])
             elif path.parts[:4] == ("tests", "pytests", "integration", "ssh"):
-                # wrapper tests are in tests/pytests/integration/ssh,
+                # wrapper integration tests are in tests/pytests/integration/ssh,
                 # additionally rename `ssh` -> `wrapper`
-                new_path = Path("tests", *path.parts[2:-1], "wrapper")
+                new_path = Path("tests", "integration", "wrapper", *path.parts[4:])
+            elif path.parts[:6] == (
+                "tests",
+                "pytests",
+                "unit",
+                "client",
+                "ssh",
+                "wrapper",
+            ):
+                # wrapper unit tests are in tests/pytests/unit/client/ssh/wrapper
+                new_path = Path("tests", "unit", "wrapper", *path.parts[6:])
             else:
                 new_path = Path("tests", *path.parts[2:])
             self._rename_potentially_colliding_test(path, new_path)
