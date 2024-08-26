@@ -27,6 +27,20 @@ PRE_COMMIT_TEST_REGEX = re.compile(
     r"^(?P<test>[^\n]+?)\.{4,}.*(?P<resolution>Failed|Passed|Skipped)$"
 )
 
+NON_IDEMPOTENT_HOOKS = (
+    "trim trailing whitespace",
+    "mixed line ending",
+    "fix end of files",
+    "Remove Python Import Header Comments",
+    "Check rST doc files exist for modules/states",
+    "Salt extensions docstrings auto-fixes",
+    "Rewrite the test suite",
+    "Rewrite Code to be Py3.",
+    "isort",
+    "black",
+    "blacken-docs",
+)
+
 
 class TargetPathExists(ValueError):
     """
@@ -106,6 +120,17 @@ def parse_pre_commit(data):
     return passing, {
         test: "\n".join(output).strip() for test, output in failing.items()
     }
+
+
+def check_pre_commit_rerun(data):
+    """
+    Check if we can expect failing hooks to turn green during a rerun.
+    """
+    _, failing = parse_pre_commit(data)
+    for hook in failing:
+        if hook.startswith(NON_IDEMPOTENT_HOOKS):
+            return True
+    return False
 
 
 @dataclass
@@ -636,8 +661,8 @@ class ExtensionMigrate:
         def _run_pre_commit_loop(retries_left):
             try:
                 self._run_in_venv("pre-commit", "run", "-a", force_non_interactive=True)
-            except ProcessExecutionError:
-                if retries_left > 0:
+            except ProcessExecutionError as err:
+                if retries_left > 0 and check_pre_commit_rerun(err.stdout):
                     return _run_pre_commit_loop(retries_left - 1)
                 raise
 
