@@ -10,7 +10,7 @@ from typing import Any
 
 import copier
 import questionary
-from plumbum import local
+from plumbum import TEE, local
 from plumbum.commands.processes import CommandNotFound, ProcessExecutionError
 
 from .rewrite import (
@@ -295,6 +295,17 @@ class ExtensionMigrate:
             self._copier_data["author"] = "Foo Bar"
             self._copier_data["author_email"] = "foo@b.ar"
 
+    def _run(self, cmd, *args) -> tuple[int, str, str]:
+        """
+        Run commands that don't need stdin, but whose output should be piped
+        to stdout (usually because they are long-running).
+        """
+        final_cmd = cmd[args]
+        if self.non_interactive:
+            return final_cmd.run()
+        else:
+            return final_cmd & TEE
+
     def execute(self):
         self._init_paths()
         res = self._filter()
@@ -334,7 +345,9 @@ class ExtensionMigrate:
         )
         if not self.salt_path.exists():
             status("Did not find Salt checkout, cloning")
-            git("clone", "https://github.com/saltstack/salt", "--single-branch")
+            self._run(
+                git, "clone", "https://github.com/saltstack/salt", "--single-branch"
+            )
         elif not self.salt_path.is_dir():
             raise RuntimeError(
                 f"The path {self.salt_path} exists, but is not a directory"
@@ -380,7 +393,7 @@ class ExtensionMigrate:
                 status(
                     "Did not find existing `filter-repo --analyze` output. Regenerating..."
                 )
-                git("filter-repo", "--analyze")
+                self._run(git, "filter-repo", "--analyze")
             git("switch", "-c", "filter-source")
 
             res: set[Path] = set()
@@ -448,15 +461,18 @@ class ExtensionMigrate:
         status("Filtering repository history in new branch `filter-source`")
 
         with local.cwd(self.salt_path):
-            git(
+            self._run(
+                git,
                 "filter-repo",
                 "--refs",
                 "refs/heads/filter-source",
                 "--force",
                 *res.args,
             )
+            status("Trying to rebase for dropping empty commits. This can fail safely.")
             try:
-                git(
+                self._run(
+                    git,
                     "rebase",
                     "--root",
                     "--empty=drop",
@@ -464,6 +480,7 @@ class ExtensionMigrate:
                 )
             except ProcessExecutionError:
                 git("rebase", "--abort")
+                status("Rebase failed. No worries, this is optional")
             finally:
                 try:
                     git("rebase", "--abort")
@@ -471,16 +488,17 @@ class ExtensionMigrate:
                     pass
             if not_deleted := list(self.salt_path.glob("**/*.py")):
                 if not self.non_interactive and not ask_yn(
-                    "Need to reset to before the great module purge."
+                    "Need to reset history to before the great module purge."
                     "\n\nNote: Some files are still present in the Salt master branch. "
                     "Ensure they did not receive any updates after the purge PR.\n"
-                    f"Files:\n{render_list(not_deleted, '*')}\n"
+                    f"Files:\n{render_list(not_deleted, '*')}\n\n Execute reset?"
                 ):
                     raise RuntimeError(
                         "Some files were not deleted during the great module purge, "
                         "not resetting to before to keep new changes. Files:\n"
                         + render_list(not_deleted, "*")
                     )
+            status("Resetting to one commit before the great module purge")
             git("reset", "--hard", "HEAD^{/Initial purge of community extensions}^")
 
     def _copier_copy(self, res: Migration):
@@ -546,7 +564,7 @@ class ExtensionMigrate:
         if res.dunder_utils_res.rewrite_mods:
             warn(
                 "✗ Fix REQUIRED (https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#utils-into-salt-extension-utils):",
-                "The following local utils mods required to be "
+                "The following migrated utils mods required to be "
                 "called via __utils__, which does not work for Saltext utils. "
                 "Calls were rewritten partly, but you need to refactor the module "
                 "to accept the required values and update the calls again:\n"
@@ -581,20 +599,24 @@ class ExtensionMigrate:
                     raise RuntimeError(
                         f"No `python{RECOMMENDED_PYVER}` executable found in $PATH, exiting"
                     )
-            python("-m", "venv", "venv", f"--prompt=saltext-{self.saltext_name}")
+            self._run(
+                python, "-m", "venv", "venv", f"--prompt=saltext-{self.saltext_name}"
+            )
             self._run_in_venv("pip", "install", "-e", ".[dev,tests,docs]")
             self._run_in_venv("pre-commit", "install", "--install-hooks")
 
     def _run_pre_commit(self, res):
         def _run_pre_commit_loop(retries_left):
             try:
-                self._run_in_venv("pre-commit", "run", "-a")
+                self._run_in_venv("pre-commit", "run", "-a", force_non_interactive=True)
             except ProcessExecutionError:
                 if retries_left > 0:
                     return _run_pre_commit_loop(retries_left - 1)
                 raise
 
-        status("Running pre-commit hooks against all files")
+        status(
+            "Running pre-commit hooks against all files. This can take a minute, please be patient"
+        )
 
         try:
             _run_pre_commit_loop(2)
@@ -608,12 +630,15 @@ class ExtensionMigrate:
                 warn(f"✗ Failing hook ({cnt + 1}): {failing_hook}", failing_output)
                 res.failing_hooks[failing_hook] = failing_output
 
-    def _run_in_venv(self, command, *args, **kwargs):
+    def _run_in_venv(self, command, *args, force_non_interactive=False):
         with local.cwd(self.saltext_path):
             venv_bin_dir = Path("venv/bin").absolute()
             cmd = local[venv_bin_dir / command]
             with local.env(PATH=f"{venv_bin_dir}:{local.env['PATH']}"):
-                cmd(*args, **kwargs)
+                if force_non_interactive:
+                    return cmd[args].run()
+                else:
+                    return self._run(cmd, *args)
 
     def _print_summary(self, res: Migration):
         next_steps: list[str] = [
