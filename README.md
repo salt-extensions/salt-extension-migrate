@@ -2,7 +2,8 @@
 
 A tool that aids in the migration of sets of Salt modules out of Salt core into a Salt extension.
 
-Please see the [salt-extension-copier docs](https://salt-extensions.github.io/salt-extension-copier/) for details.
+Please see the [salt-extension-copier docs](https://salt-extensions.github.io/salt-extension-copier/) for details, especially
+the [extraction guide](https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html).
 
 ## Usage
 ```console
