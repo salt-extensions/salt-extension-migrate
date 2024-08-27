@@ -457,7 +457,7 @@ class ExtensionMigrate:
                         ".git/filter-repo/analysis/path-all-sizes.txt",
                         ".git/filter-repo/analysis/path-deleted-sizes.txt",
                     ]
-                    | awk["{print $5}"]
+                    | awk["{print $NF}"]
                     | sort
                     | uniq
                     | grep[
