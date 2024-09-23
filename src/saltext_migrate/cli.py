@@ -14,7 +14,10 @@ def main():
     )
     parser.add_argument(
         "saltext_name",
-        help="The name of the Salt extension to create.",
+        help=(
+            "The name of the Salt extension to create (without `saltext` prefix!)."
+            " Example: vault"
+        ),
     )
     parser.add_argument(
         "-m",
