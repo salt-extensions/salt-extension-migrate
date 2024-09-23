@@ -152,7 +152,7 @@ class DunderParser(ast.NodeTransformer):  # pylint: disable=missing-class-docstr
 
 
 def _get_salt_code_root():
-    return (next(Path("venv/lib").glob("python3.*")) / "site-packages").resolve()
+    return (next(Path(".venv/lib").glob("python3.*")) / "site-packages").resolve()
 
 
 def _defaultdict_factory():
@@ -226,7 +226,7 @@ class UtilsMigrator:
 
     def __post_init__(self):
         self._salt_base_path = (
-            next((self.saltext_path / "venv" / "lib").glob("python3.*"))
+            next((self.saltext_path / ".venv" / "lib").glob("python3.*"))
             / "site-packages"
         ).resolve()
         self._saltext_base_path = (self.saltext_path / "src").resolve()
