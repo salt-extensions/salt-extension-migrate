@@ -21,6 +21,8 @@ from .rewrite import (
     rewrite_utils,
 )
 
+SALTEXT_COPIER_URL = "https://github.com/salt-extensions/salt-extension-copier"
+
 RECOMMENDED_PYVER = "3.10"
 
 PRE_COMMIT_TEST_REGEX = re.compile(
@@ -342,6 +344,7 @@ class ExtensionMigrate:
         self._copier_data = {
             "no_saltext_namespace": False,
             "license": "apache",
+            "relax_pylint": True,
         }
         if self.non_interactive:
             self._copier_data["author"] = "Foo Bar"
@@ -569,13 +572,15 @@ class ExtensionMigrate:
             copier_data["loaders"] = list(
                 sorted(res.module_types.difference(("util",)))
             )
-            copier.run_copy(
-                "https://github.com/salt-extensions/salt-extension-copier",
-                unsafe=True,
-                data=copier_data,
-                defaults=self.non_interactive,
-                quiet=True,
-            )
+            # We want to create the venv ourselves, so skip the Copier automation.
+            with local.env(SKIP_INIT_MIGRATE="1"):
+                copier.run_copy(
+                    SALTEXT_COPIER_URL,
+                    unsafe=True,
+                    data=copier_data,
+                    defaults=self.non_interactive,
+                    quiet=True,
+                )
             for glob in ("tests/**/test_*.py", "src/**/*_mod.py"):
                 list(map(lambda x: x.unlink(), self.saltext_path.glob(glob)))
 
@@ -652,7 +657,7 @@ class ExtensionMigrate:
                         f"No `python{RECOMMENDED_PYVER}` executable found in $PATH, exiting"
                     )
             self._run(
-                python, "-m", "venv", "venv", f"--prompt=saltext-{self.saltext_name}"
+                python, "-m", "venv", ".venv", f"--prompt=saltext-{self.saltext_name}"
             )
             self._run_in_venv("pip", "install", "-e", ".[dev,tests,docs]")
             self._run_in_venv("pre-commit", "install", "--install-hooks")
@@ -682,10 +687,14 @@ class ExtensionMigrate:
             res.failing_hooks = failing
 
     def _run_in_venv(self, command, *args, force_non_interactive=False):
+        venv_dir = self.saltext_path / ".venv"
+        venv_bin_dir = venv_dir / "bin"
         with local.cwd(self.saltext_path):
-            venv_bin_dir = Path("venv/bin").absolute()
             cmd = local[venv_bin_dir / command]
-            with local.env(PATH=f"{venv_bin_dir}:{local.env['PATH']}"):
+            with local.env(
+                PATH=f"{venv_bin_dir}{os.pathsep}{local.env['PATH']}",
+                VIRTUAL_ENV=str(venv_dir),
+            ):
                 if force_non_interactive:
                     return cmd[args].run()
                 else:
@@ -694,7 +703,7 @@ class ExtensionMigrate:
     def _print_summary(self, res: Migration):
         next_steps: list[str] = [
             f"Change into the Saltext workdir: `cd saltext-{self.saltext_name}`",
-            "Source the virtualenv: `source venv/bin/activate`",
+            "Source the virtualenv: `source .venv/bin/activate`",
         ]
 
         if "util" in res.module_types:
