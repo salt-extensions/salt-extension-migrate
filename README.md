@@ -12,7 +12,7 @@ usage: saltext-migrate [-h] [-m [MATCH ...]] [-i INCLUDE] [-e EXCLUDE] [--avoid-
 Migrate modules out of Salt core into an extension.
 
 positional arguments:
-  saltext_name          The name of the Salt extension to create.
+  saltext_name          The name of the Salt extension to create (without `saltext` prefix!). Example: vault
 
 options:
   -h, --help            show this help message and exit
