@@ -366,14 +366,21 @@ class ExtensionMigrate:
         res = self._filter()
 
         with local.cwd(self.salt_path):
+            # Check if we need test container support.
+            # We need to reset to before the purge to check the final
+            # files reliably.
+            git("reset", "--hard", "HEAD^{/Initial purge of community extensions}^")
             try:
                 grep(
                     "salt_factories.get_container",
-                    *list(filter(lambda x: x.exists(), res.test_files)),
+                    *filter(lambda x: x.exists(), res.test_files),
                 )
                 self._copier_data["test_containers"] = True
             except ProcessExecutionError:
                 pass
+            finally:
+                # Always go back to the previous HEAD
+                git("reset", "--hard", "HEAD@{1}")
 
         self._execute_filter(res)
         self._copier_copy(res)
