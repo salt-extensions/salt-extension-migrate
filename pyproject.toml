@@ -33,7 +33,7 @@ dependencies = [
     "plumbum",
     "bowler",
     "questionary",
-    "copier>=9.1",
+    "copier>=9.3",
     "copier-templates-extensions",
 ]
 version = "1.1.1"
