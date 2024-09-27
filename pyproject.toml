@@ -45,7 +45,7 @@ content-type = "text/markdown"
 
 [project.urls]
 Homepage = "https://github.com/salt-extensions/salt-extension-migrate"
-Documentation = "https://salt-extensions.github.io/salt-extension-migrate/"
+Documentation = "https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html"
 Source = "https://github.com/salt-extensions/salt-extension-migrate"
 Tracker = "https://github.com/salt-extensions/salt-extension-migrate/issues"
 
