@@ -6,10 +6,11 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import copier
 import questionary
+import yaml
 from plumbum import TEE, local
 from plumbum.commands.processes import CommandNotFound, ProcessExecutionError
 
@@ -332,23 +333,35 @@ class ExtensionMigrate:
     include: list[str] = field(default_factory=list)
     exclude: list[str] = field(default_factory=list)
     avoid_collisions: bool = False
+    data_file: Optional[Path] = None
     non_interactive: bool = False
     salt_path: Path = field(init=False)
     saltext_path: Path = field(init=False)
     _copier_data: dict[str, Any] = field(init=False, repr=False)
 
     def __post_init__(self):
+        if self.data_file is not None:
+            self.data_file = Path(self.data_file).absolute()
         self._ensure_cwd()
         self.salt_path = Path("salt").absolute()
         self.saltext_path = Path(f"saltext-{self.saltext_name}").absolute()
-        self._copier_data = {
+
+        copier_data = {
             "no_saltext_namespace": False,
             "license": "apache",
             "relax_pylint": True,
         }
         if self.non_interactive:
-            self._copier_data["author"] = "Foo Bar"
-            self._copier_data["author_email"] = "foo@b.ar"
+            copier_data["author"] = "Foo Bar"
+            copier_data["author_email"] = "foo@b.ar"
+        if self.data_file is not None:
+            if not self.data_file.exists():
+                raise ValueError("Passed data-file does not exist")
+            custom_copier_data = yaml.safe_load(self.data_file.read_text())
+            if not isinstance(custom_copier_data, dict):
+                raise TypeError("Passed data-file does not contain a mapping")
+            copier_data.update(custom_copier_data)
+        self._copier_data = copier_data
 
     def _run(self, cmd, *args) -> tuple[int, str, str]:
         """

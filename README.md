@@ -7,7 +7,8 @@ the [extraction guide](https://salt-extensions.github.io/salt-extension-copier/t
 
 ## Usage
 ```console
-usage: saltext-migrate [-h] [-m [MATCH ...]] [-i INCLUDE] [-e EXCLUDE] [--avoid-collisions] [-y] saltext_name
+usage: saltext-migrate [-h] [-m [MATCH ...]] [-i INCLUDE] [-e EXCLUDE] [--avoid-collisions] [-d DATA_FILE] [-y]
+                       saltext_name
 
 Migrate modules out of Salt core into an extension.
 
@@ -26,6 +27,10 @@ options:
   --avoid-collisions    When renaming paths, avoid collisions. This can be important when both pytests and non-pytests
                         of the same type were present together at some point in Salt's history. Will result in the
                         files names being suffixed with _old (non-pytest) and _pytest respectively
+  -d DATA_FILE, --data-file DATA_FILE
+                        A YAML file providing defaults for Copier template questions. Handy when migrating many
+                        modules. For available questions, see https://salt-extensions.github.io/salt-extension-
+                        copier/ref/questions.html
   -y, --yes             Assume yes on all questions. Makes the migration non-interactive. You need to update some
                         answers to the Copier template afterwards (especially author metadata)
 ```

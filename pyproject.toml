@@ -35,8 +35,9 @@ dependencies = [
     "questionary",
     "copier>=9.3",
     "copier-templates-extensions",
+    "pyyaml",
 ]
-version = "1.1.1"
+version = "1.2.0"
 
 [project.readme]
 file = "README.md"

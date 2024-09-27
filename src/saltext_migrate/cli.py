@@ -53,11 +53,21 @@ def main():
         action="store_true",
     )
     parser.add_argument(
+        "-d",
+        "--data-file",
+        help=(
+            "A YAML file providing defaults for Copier template questions. "
+            "Handy when migrating many modules. For available questions, see "
+            "https://salt-extensions.github.io/salt-extension-copier/ref/questions.html"
+        ),
+    )
+    parser.add_argument(
         "-y",
         "--yes",
         help=(
             "Assume yes on all questions. Makes the migration non-interactive. "
-            "You need to update some answers to the Copier template afterwards "
+            "In case you did not provide a data-file with custom default answers, "
+            "you need to update some answers to the Copier template afterwards "
             "(especially author metadata)"
         ),
         dest="non_interactive",
@@ -75,5 +85,6 @@ def main():
         exclude=args.exclude,
         avoid_collisions=args.avoid_collisions,
         non_interactive=args.non_interactive,
+        data_file=args.data_file,
     )
     migration.execute()
