@@ -335,6 +335,8 @@ class ExtensionMigrate:
     avoid_collisions: bool = False
     data_file: Optional[Path] = None
     non_interactive: bool = False
+    base_branch: str = "3007.x"
+    purge_reset: bool = False
     salt_path: Path = field(init=False)
     saltext_path: Path = field(init=False)
     _copier_data: dict[str, Any] = field(init=False, repr=False)
@@ -343,7 +345,7 @@ class ExtensionMigrate:
         if self.data_file is not None:
             self.data_file = Path(self.data_file).absolute()
         self._ensure_cwd()
-        self.salt_path = Path("salt").absolute()
+        self.salt_path = Path(f"salt_{self.base_branch}").absolute()
         self.saltext_path = Path(f"saltext-{self.saltext_name}").absolute()
 
         copier_data = {
@@ -382,7 +384,9 @@ class ExtensionMigrate:
             # Check if we need test container support.
             # We need to reset to before the purge to check the final
             # files reliably.
-            git("reset", "--hard", "HEAD^{/Initial purge of community extensions}^")
+            needs_reset = self.base_branch == "master" and self.purge_reset
+            if needs_reset:
+                git("reset", "--hard", "HEAD^{/Initial purge of community extensions}^")
             try:
                 grep(
                     "salt_factories.get_container",
@@ -392,8 +396,9 @@ class ExtensionMigrate:
             except ProcessExecutionError:
                 pass
             finally:
-                # Always go back to the previous HEAD
-                git("reset", "--hard", "HEAD@{1}")
+                if needs_reset:
+                    # Always go back to the previous HEAD
+                    git("reset", "--hard", "HEAD@{1}")
 
         self._execute_filter(res)
         self._copier_copy(res)
@@ -408,11 +413,11 @@ class ExtensionMigrate:
         self._cleanup()
 
     def _ensure_cwd(self):
-        if Path(".").absolute().name == "salt":
+        if (cwd := Path(".").absolute().name).startswith("salt_"):
             if Path(".git").exists():
                 os.chdir("..")
-            else:
-                os.chdir("../../")
+        elif cwd == "salt":
+            os.chdir("../../")
 
     def _init_paths(self):
         status(
@@ -421,7 +426,13 @@ class ExtensionMigrate:
         if not self.salt_path.exists():
             status("Did not find Salt checkout, cloning")
             self._run(
-                git, "clone", "https://github.com/saltstack/salt", "--single-branch"
+                git,
+                "clone",
+                "--single-branch",
+                "--branch",
+                self.base_branch,
+                "https://github.com/saltstack/salt",
+                self.salt_path.name,
             )
         elif not self.salt_path.is_dir():
             raise RuntimeError(
@@ -435,8 +446,8 @@ class ExtensionMigrate:
             with local.cwd(self.salt_path):
                 status("Removing potentially existing `filter-source` branch")
                 # in case we're on a filter-source branch
-                git("reset", "--hard", "master")
-                git("switch", "master")
+                git("reset", "--hard", self.base_branch)
+                git("switch", self.base_branch)
                 try:
                     git("branch", "-D", "filter-source")
                 except ProcessExecutionError:
@@ -458,7 +469,7 @@ class ExtensionMigrate:
 
             status("Discovering related paths (historic and current)")
 
-            git("switch", "master")
+            git("switch", self.base_branch)
             try:
                 git("branch", "-D", "filter-source")
             except ProcessExecutionError:
@@ -561,20 +572,21 @@ class ExtensionMigrate:
                     git("rebase", "--abort")
                 except ProcessExecutionError:
                     pass
-            if not_deleted := list(self.salt_path.glob("**/*.py")):
-                if not self.non_interactive and not ask_yn(
-                    "Need to reset history to before the great module purge."
-                    "\n\nNote: Some files are still present in the Salt master branch. "
-                    "Ensure they did not receive any updates after the purge PR.\n"
-                    f"Files:\n{render_list(not_deleted, '*')}\n\n Execute reset?"
-                ):
-                    raise RuntimeError(
-                        "Some files were not deleted during the great module purge, "
-                        "not resetting to before to keep new changes. Files:\n"
-                        + render_list(not_deleted, "*")
-                    )
-            status("Resetting to one commit before the great module purge")
-            git("reset", "--hard", "HEAD^{/Initial purge of community extensions}^")
+            if self.base_branch == "master" and self.purge_reset:
+                if not_deleted := list(self.salt_path.glob("**/*.py")):
+                    if not self.non_interactive and not ask_yn(
+                        "Need to reset history to before the great module purge."
+                        "\n\nNote: Some files are still present in the Salt master branch. "
+                        "Ensure they did not receive any updates after the purge PR.\n"
+                        f"Files:\n{render_list(not_deleted, '*')}\n\n Execute reset?"
+                    ):
+                        raise RuntimeError(
+                            "Some files were not deleted during the great module purge, "
+                            "not resetting to before to keep new changes. Files:\n"
+                            + render_list(not_deleted, "*")
+                        )
+                status("Resetting to one commit before the great module purge")
+                git("reset", "--hard", "HEAD^{/Initial purge of community extensions}^")
 
     def _copier_copy(self, res: Migration):
         text = "Running copier"
@@ -831,7 +843,7 @@ class ExtensionMigrate:
     def _cleanup(self):
         # cleanup after ourselves, but leave the salt checkout for future migrations
         with local.cwd(self.salt_path):
-            git("switch", "master")
+            git("switch", self.base_branch)
             try:
                 git("branch", "-D", "filter-source")
             except ProcessExecutionError:

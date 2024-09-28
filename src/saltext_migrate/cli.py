@@ -42,6 +42,28 @@ def main():
         action="append",
     )
     parser.add_argument(
+        "-b",
+        "--base-branch",
+        help=(
+            "The Salt core branch the modules should be extracted from. "
+            "Usually, the modules to migrate have been removed from `master` already "
+            "and thus don't receive any updates there. If any fixes are merged, "
+            "they end up in the `3006.x` and `3007.x` branches. "
+            "This allows to specify the branch the module are extracted from. "
+            "Defaults to `3007.x`."
+        ),
+    )
+    parser.add_argument(
+        "--purge-reset",
+        help=(
+            "When extracting modules from the `master` branch, reset the repository "
+            "to one commit before the great module purge. This is necessary when "
+            "extracting purged (!) modules from the `master` branch instead of the "
+            "`3006.x` or `3007.x` ones. Ensure you have a good reason to do so."
+        ),
+        action="store_true",
+    )
+    parser.add_argument(
         "--avoid-collisions",
         help=(
             "When renaming paths, avoid collisions. This can be important when both "
@@ -86,5 +108,7 @@ def main():
         avoid_collisions=args.avoid_collisions,
         non_interactive=args.non_interactive,
         data_file=args.data_file,
+        base_branch=args.base_branch or "3007.x",
+        purge_reset=args.purge_reset,
     )
     migration.execute()
