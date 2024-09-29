@@ -820,7 +820,9 @@ class ExtensionMigrate:
                     + render_list(res.failing_hooks, indent=4),
                     warn=True,
                 )
-                next_steps.append("Fix pre-commit hooks")
+                next_steps.append(
+                    "Fix above-mentioned pre-commit hooks, check via `pre-commit run -a`"
+                )
             if res.non_pytests_after_migration:
                 summary(
                     "\n  * Migrate the following non-pytest tests or skip them temporarily "
@@ -831,14 +833,24 @@ class ExtensionMigrate:
                 next_steps.append("Migrate or skip non-pytests")
 
         next_steps += [
+            (
+                "Check if the modules depend on external libraries and declare them in `pyproject.toml` "
+                "(https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#library-dependencies)"
+            ),
             "Ensure tests are passing: `nox -e tests-3`",
+            (
+                "Consider extracting general documentation from module docstrings into `docs/topics/` "
+                "(https://salt-extensions.github.io/salt-extension-copier/topics/extraction.html#dedicated-docs)"
+            ),
             "Ensure docs are building: `nox -e docs`",
             "Commit the repo: `git add . && git commit -m 'Initial extension layout'`",
-            "Apply for a new repository in the `salt-extensions` org "
-            "(optional: https://github.com/salt-extensions/community/issues/new)",
+            (
+                "Apply for a new repository in the `salt-extensions` org "
+                "(optional: https://github.com/salt-extensions/community/issues/new?labels=repo&template=repo.yml&title=%5BRepo+request%5D%3A+)"
+            ),
         ]
         summary(">> Next steps", title=True)
-        summary(render_list(next_steps))
+        summary(render_list(next_steps, list_style="\n  ☐"))
 
     def _cleanup(self):
         # cleanup after ourselves, but leave the salt checkout for future migrations
