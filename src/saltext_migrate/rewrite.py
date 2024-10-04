@@ -122,12 +122,14 @@ def rewrite_patch_arglist(saltext_path: Path, res: "Migration"):
     query = query.select_function("patch")
     query = query.filter(_filter_salt_imports)
     query = query.modify(_replace_patch_arglist)
-    # Also replace in patch.dict and patch.object
-    for method in ("dict", "object"):
-        query = query.select_root()
-        query = query.select_method(method)
-        query = query.filter(_filter_salt_imports)
-        query = query.modify(_replace_patch_arglist)
+    # Also replace in patch.dict.
+    query = query.select_root()
+    query = query.select_method("dict")
+    query = query.filter(_filter_salt_imports)
+    query = query.modify(_replace_patch_arglist)
+    # patch.object is much harder because its
+    # argument is not a string. Not rewriting this argument
+    # also throws a NameError, so it's easy to detect.
     query.execute(write=True, interactive=False, silent=False)
 
 
