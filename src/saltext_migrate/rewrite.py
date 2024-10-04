@@ -48,20 +48,35 @@ SALT_DUNDERS = (
 
 
 def rewrite_module_imports(saltext_path: Path, saltext_name: str, res: "Migration"):
-    def _filter_salt_imports(node, capture, filename):
-        match_imports = set(res.module_imports).union(
-            f"from {'.'.join(mod.split('.')[:-1])} import {mod.split('.')[-1]}"
-            for mod in res.module_imports
-        )
-        node = str(capture["node"])
-        return any(match in node for match in match_imports)
+    def _create_filter(mod, from_import=False):
+        def _filter_salt_from_imports(node, capture, filename):
+            match = (
+                f"from salt.{'.'.join(mod.split('.')[:-1])} import {mod.split('.')[-1]}"
+            )
+            return match in str(capture["node"])
+
+        def _filter_salt_imports(node, capture, filename):
+            return mod in str(capture["node"])
+
+        if from_import:
+            return _filter_salt_from_imports
+        return _filter_salt_imports
 
     query = Query([str(saltext_path / "src"), str(saltext_path / "tests")])
     for mod_path in res.modules:
+        mod_parent = ".".join(mod_path.with_suffix("").parts[1:-1])
         mod = ".".join(mod_path.with_suffix("").parts[1:])
-        query = query.select_module(f"salt.{mod}")
-        query = query.filter(_filter_salt_imports)
-        query = query.rename(f"saltext.{saltext_name}.{mod}")
+        for from_import in (False, True):
+            if from_import:
+                # Bowler does not recognize from imports otherwise
+                query = query.select_module(f"salt.{mod_parent}")
+            else:
+                query = query.select_module(f"salt.{mod}")
+            query = query.filter(_create_filter(mod, from_import))
+            if from_import:
+                query = query.rename(f"saltext.{saltext_name}.{mod_parent}")
+            else:
+                query = query.rename(f"saltext.{saltext_name}.{mod}")
     query.execute(write=True, interactive=False, silent=False)
 
 
@@ -127,9 +142,7 @@ def rewrite_patch_arglist(saltext_path: Path, res: "Migration"):
     query = query.select_method("dict")
     query = query.filter(_filter_salt_imports)
     query = query.modify(_replace_patch_arglist)
-    # patch.object is much harder because its
-    # argument is not a string. Not rewriting this argument
-    # also throws a NameError, so it's easy to detect.
+    # patch.object is rewritten by rewrite_module_imports above
     query.execute(write=True, interactive=False, silent=False)
 
 
