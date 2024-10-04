@@ -37,7 +37,7 @@ dependencies = [
     "copier-templates-extensions",
     "pyyaml",
 ]
-version = "1.3.1"
+version = "1.3.2"
 
 [project.readme]
 file = "README.md"

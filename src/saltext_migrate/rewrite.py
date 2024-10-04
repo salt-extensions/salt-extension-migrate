@@ -85,12 +85,8 @@ def rewrite_tests_support_imports(saltext_path: Path, res: "Migration"):
 
 def rewrite_patch_arglist(saltext_path: Path, res: "Migration"):
     def _filter_salt_imports(node, capture, filename):
-        match_imports = set(res.module_imports).union(
-            f"from {'.'.join(mod.split('.')[:-1])} import {mod.split('.')[-1]}"
-            for mod in res.module_imports
-        )
         node = str(capture["node"])
-        return any(match in node for match in match_imports)
+        return any(match in node for match in res.module_imports)
 
     def _replace_patch_arglist(node, capture, filename):
         if hasattr(node, "children"):
@@ -126,6 +122,12 @@ def rewrite_patch_arglist(saltext_path: Path, res: "Migration"):
     query = query.select_function("patch")
     query = query.filter(_filter_salt_imports)
     query = query.modify(_replace_patch_arglist)
+    # Also replace in patch.dict and patch.object
+    for method in ("dict", "object"):
+        query = query.select_root()
+        query = query.select_method(method)
+        query = query.filter(_filter_salt_imports)
+        query = query.modify(_replace_patch_arglist)
     query.execute(write=True, interactive=False, silent=False)
 
 
