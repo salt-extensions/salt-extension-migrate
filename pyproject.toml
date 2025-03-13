@@ -33,11 +33,11 @@ dependencies = [
     "plumbum",
     "bowler",
     "questionary",
-    "copier>=9.3,<9.5",
+    "copier>=9.6",
     "copier-templates-extensions",
     "pyyaml",
 ]
-version = "1.3.4"
+version = "1.3.5"
 
 [project.readme]
 file = "README.md"
