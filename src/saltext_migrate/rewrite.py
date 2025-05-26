@@ -63,6 +63,7 @@ def rewrite_module_imports(saltext_path: Path, saltext_name: str, res: "Migratio
         return _filter_salt_imports
 
     query = Query([str(saltext_path / "src"), str(saltext_path / "tests")])
+    saltext_import_name = saltext_name.replace("-", "_")
     for mod_path in res.modules:
         mod_parent = ".".join(mod_path.with_suffix("").parts[1:-1])
         mod = ".".join(mod_path.with_suffix("").parts[1:])
@@ -74,9 +75,9 @@ def rewrite_module_imports(saltext_path: Path, saltext_name: str, res: "Migratio
                 query = query.select_module(f"salt.{mod}")
             query = query.filter(_create_filter(mod, from_import))
             if from_import:
-                query = query.rename(f"saltext.{saltext_name}.{mod_parent}")
+                query = query.rename(f"saltext.{saltext_import_name}.{mod_parent}")
             else:
-                query = query.rename(f"saltext.{saltext_name}.{mod}")
+                query = query.rename(f"saltext.{saltext_import_name}.{mod}")
     query.execute(write=True, interactive=False, silent=False)
 
 
