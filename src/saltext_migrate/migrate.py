@@ -157,15 +157,16 @@ class Migration:
         self.failing_hooks = {}
 
         # rename salt/modules/foo.py => src/saltext/foo/modules/foo.py
+        saltext_import_name = self.saltext_name.replace("-", "_")
         for path in self.modules:
             if path.parts[1] == "cloud":
                 # cloud modules are in salt/cloud/clouds
-                new_path = Path("src", "saltext", self.saltext_name, *path.parts[2:])
+                new_path = Path("src", "saltext", saltext_import_name, *path.parts[2:])
             elif path.parts[1:3] == ("client", "ssh", "wrapper"):
                 # wrapper modules are in salt/client/ssh/wrapper
-                new_path = Path("src", "saltext", self.saltext_name, *path.parts[3:])
+                new_path = Path("src", "saltext", saltext_import_name, *path.parts[3:])
             else:
-                new_path = Path("src", "saltext", self.saltext_name, *path.parts[1:])
+                new_path = Path("src", "saltext", saltext_import_name, *path.parts[1:])
 
             self._rename(path, new_path)
 
