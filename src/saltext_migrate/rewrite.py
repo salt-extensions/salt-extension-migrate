@@ -47,7 +47,9 @@ SALT_DUNDERS = (
 )
 
 
-def rewrite_module_imports(saltext_path: Path, saltext_name: str, res: "Migration"):
+def rewrite_module_imports(
+    saltext_path: Path, saltext_import_name: str, res: "Migration"
+):
     def _create_filter(mod, from_import=False):
         def _filter_salt_from_imports(node, capture, filename):
             match = (
@@ -63,7 +65,6 @@ def rewrite_module_imports(saltext_path: Path, saltext_name: str, res: "Migratio
         return _filter_salt_imports
 
     query = Query([str(saltext_path / "src"), str(saltext_path / "tests")])
-    saltext_import_name = saltext_name.replace("-", "_")
     for mod_path in res.modules:
         mod_parent = ".".join(mod_path.with_suffix("").parts[1:-1])
         mod = ".".join(mod_path.with_suffix("").parts[1:])
@@ -230,7 +231,7 @@ class DunderUtilsMigrationResult:
 
 @dataclass
 class UtilsMigrator:
-    saltext_name: str
+    saltext_import_name: str
     saltext_path: Path
     res: "Migration"
     utils_info: dict[Path, dict] = field(init=False, repr=False)
@@ -250,7 +251,7 @@ class UtilsMigrator:
         self._saltext_base_path = (self.saltext_path / "src").resolve()
         self._salt_utils_path = (self._salt_base_path / "salt" / "utils").resolve()
         self._saltext_utils_path = (
-            self._saltext_base_path / "saltext" / self.saltext_name / "utils"
+            self._saltext_base_path / "saltext" / self.saltext_import_name / "utils"
         )
         self.utils_info = self._get_utils_module_info()
 
@@ -282,7 +283,7 @@ class UtilsMigrator:
         """
         Return utils module details.
         """
-        full_saltext_module_name = f"saltext.{self.saltext_name}.utils.{name}"
+        full_saltext_module_name = f"saltext.{self.saltext_import_name}.utils.{name}"
         full_module_name = f"salt.utils.{name}"
         for base_path, full_name in (
             (self._saltext_base_path, full_saltext_module_name),
@@ -367,11 +368,13 @@ class UtilsMigrator:
         node.replace(replacement)
 
 
-def rewrite_utils(saltext_path: Path, saltext_name: str, res: "Migration"):
+def rewrite_utils(saltext_path: Path, saltext_import_name: str, res: "Migration"):
     """
     Rewrite the passed in paths
     """
-    fixer = UtilsMigrator(saltext_name=saltext_name, saltext_path=saltext_path, res=res)
+    fixer = UtilsMigrator(
+        saltext_import_name=saltext_import_name, saltext_path=saltext_path, res=res
+    )
     (
         Query(saltext_path / "src")
         .select(
