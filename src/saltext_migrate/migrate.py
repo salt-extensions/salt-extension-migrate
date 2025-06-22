@@ -139,7 +139,7 @@ def check_pre_commit_rerun(data):
 @dataclass
 class Migration:
     result: list[Path]
-    saltext_name: str
+    saltext_import_name: str
     saltext_path: Path
     avoid_collisions: bool = False
     renames: dict[Path, Path] = field(init=False)
@@ -157,16 +157,21 @@ class Migration:
         self.failing_hooks = {}
 
         # rename salt/modules/foo.py => src/saltext/foo/modules/foo.py
-        saltext_import_name = self.saltext_name.replace("-", "_")
         for path in self.modules:
             if path.parts[1] == "cloud":
                 # cloud modules are in salt/cloud/clouds
-                new_path = Path("src", "saltext", saltext_import_name, *path.parts[2:])
+                new_path = Path(
+                    "src", "saltext", self.saltext_import_name, *path.parts[2:]
+                )
             elif path.parts[1:3] == ("client", "ssh", "wrapper"):
                 # wrapper modules are in salt/client/ssh/wrapper
-                new_path = Path("src", "saltext", saltext_import_name, *path.parts[3:])
+                new_path = Path(
+                    "src", "saltext", self.saltext_import_name, *path.parts[3:]
+                )
             else:
-                new_path = Path("src", "saltext", saltext_import_name, *path.parts[1:])
+                new_path = Path(
+                    "src", "saltext", self.saltext_import_name, *path.parts[1:]
+                )
 
             self._rename(path, new_path)
 
@@ -340,6 +345,7 @@ class ExtensionMigrate:
     purge_reset: bool = False
     salt_path: Path = field(init=False)
     saltext_path: Path = field(init=False)
+    saltext_import_name: Path = field(init=False)
     _copier_data: dict[str, Any] = field(init=False, repr=False)
 
     def __post_init__(self):
@@ -348,6 +354,7 @@ class ExtensionMigrate:
         self._ensure_cwd()
         self.salt_path = Path(f"salt_{self.base_branch}").absolute()
         self.saltext_path = Path(f"saltext-{self.saltext_name}").absolute()
+        self.saltext_import_name = self.saltext_name.replace("-", "_")
 
         copier_data = {
             "no_saltext_namespace": False,
@@ -485,7 +492,7 @@ class ExtensionMigrate:
 
             res: set[Path] = set()
 
-            for single in self.match or [self.saltext_name]:
+            for single in self.match or [self.saltext_import_name]:
                 cmd_chain = (
                     grep[
                         single,
@@ -539,7 +546,7 @@ class ExtensionMigrate:
 
             return Migration(
                 selected,
-                saltext_name=self.saltext_name,
+                saltext_import_name=self.saltext_import_name,
                 saltext_path=self.saltext_path,
                 avoid_collisions=self.avoid_collisions,
             )
@@ -630,7 +637,7 @@ class ExtensionMigrate:
 
     def _rewrite_module_imports(self, res: Migration):
         status("Rewriting module imports")
-        rewrite_module_imports(self.saltext_path, self.saltext_name, res)
+        rewrite_module_imports(self.saltext_path, self.saltext_import_name, res)
 
     def _rewrite_tests_support_imports(self, res: Migration):
         status("Rewriting tests.support imports")
@@ -642,7 +649,9 @@ class ExtensionMigrate:
 
     def _rewrite_utils(self, res: Migration):
         status("Rewriting __utils__")
-        res.dunder_utils_res = rewrite_utils(self.saltext_path, self.saltext_name, res)
+        res.dunder_utils_res = rewrite_utils(
+            self.saltext_path, self.saltext_import_name, res
+        )
 
         if res.dunder_utils_res.missed_critical:
             warn(
