@@ -46,8 +46,8 @@ def main():
         "--base-branch",
         help=(
             "The Salt core branch the modules should be extracted from. "
-            "Usually, the modules to migrate have been removed from `master` already "
-            "and thus don't receive any updates there. If any fixes are merged, "
+            "Usually, the modules to migrate have been removed from `master`/`3008.x` "
+            "already and thus don't receive any updates there. If any fixes are merged, "
             "they end up in the `3006.x` and `3007.x` branches. "
             "This allows to specify the branch the module are extracted from. "
             "Defaults to `3007.x`."
@@ -56,9 +56,9 @@ def main():
     parser.add_argument(
         "--purge-reset",
         help=(
-            "When extracting modules from the `master` branch, reset the repository "
-            "to one commit before the great module purge. This is necessary when "
-            "extracting purged (!) modules from the `master` branch instead of the "
+            "When extracting modules from the `master` or `3008.x` branches, reset the "
+            "repository to one commit before the great module purge. This is necessary when "
+            "extracting purged (!) modules from the `master`/`3008.x` branch instead of the "
             "`3006.x` or `3007.x` ones. Ensure you have a good reason to do so."
         ),
         action="store_true",

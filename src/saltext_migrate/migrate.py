@@ -392,7 +392,7 @@ class ExtensionMigrate:
             # Check if we need test container support.
             # We need to reset to before the purge to check the final
             # files reliably.
-            needs_reset = self.base_branch == "master" and self.purge_reset
+            needs_reset = self.base_branch in ("master", "3008.x") and self.purge_reset
             if needs_reset:
                 git("reset", "--hard", "HEAD^{/Initial purge of community extensions}^")
             try:
@@ -580,7 +580,7 @@ class ExtensionMigrate:
                     git("rebase", "--abort")
                 except ProcessExecutionError:
                     pass
-            if self.base_branch == "master" and self.purge_reset:
+            if self.base_branch in ("master", "3008.x") and self.purge_reset:
                 if not_deleted := list(self.salt_path.glob("**/*.py")):
                     if not self.non_interactive and not ask_yn(
                         "Need to reset history to before the great module purge."
