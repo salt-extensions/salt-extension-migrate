@@ -345,7 +345,7 @@ class ExtensionMigrate:
     purge_reset: bool = False
     salt_path: Path = field(init=False)
     saltext_path: Path = field(init=False)
-    saltext_import_name: Path = field(init=False)
+    saltext_import_name: str = field(init=False)
     _copier_data: dict[str, Any] = field(init=False, repr=False)
 
     def __post_init__(self):

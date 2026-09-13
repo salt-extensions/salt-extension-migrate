@@ -95,7 +95,6 @@ def main():
         dest="non_interactive",
         action="store_true",
     )
-    args = parser.parse_args()
     if len(sys.argv[1:]) == 0:
         parser.print_help()
         parser.exit()
