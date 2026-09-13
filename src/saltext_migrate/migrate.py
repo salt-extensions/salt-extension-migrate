@@ -595,6 +595,30 @@ class ExtensionMigrate:
                         )
                 status("Resetting to one commit before the great module purge")
                 git("reset", "--hard", "HEAD^{/Initial purge of community extensions}^")
+            elif self.base_branch == "3007.x":
+                # There was a botched merge-forward that merged 3008.x into 3007.x.
+                # If the merge-forward and its revert are the latest two commits, just get rid of them.
+                # Context: https://github.com/saltstack/salt/commit/03014ce2976e23ba1af4f74881899dd33d04d26e
+                try:
+                    last_commits = [
+                        line.split("\x00", maxsplit=1)
+                        for line in git("log", "-3", r"--format=%h%x00%s").splitlines()
+                        if "\x00" in line
+                    ]
+                except ProcessExecutionError:
+                    pass
+                else:
+                    if (
+                        len(last_commits) == 3
+                        and last_commits[0][1]
+                        == "Revert PR #69622 (mis-merge of 3008.x content onto 3007.x)"
+                        and last_commits[1][1]
+                        == "Initial purge of community extensions"
+                    ):
+                        try:
+                            git("reset", "--hard", last_commits[2][0])
+                        except ProcessExecutionError:
+                            pass
 
     def _copier_copy(self, res: Migration):
         text = "Running copier"
