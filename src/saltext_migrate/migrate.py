@@ -24,7 +24,7 @@ from .rewrite import (
 
 SALTEXT_COPIER_URL = "https://github.com/salt-extensions/salt-extension-copier"
 
-RECOMMENDED_PYVER = "3.10"
+RECOMMENDED_PYVER = "3.14"
 
 PRE_COMMIT_TEST_REGEX = re.compile(
     r"^(?P<test>[^\n]+?)\.{4,}.*(?P<resolution>Failed|Passed|Skipped)$"
