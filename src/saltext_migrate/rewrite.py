@@ -290,7 +290,7 @@ class UtilsMigrator:
             (self._salt_base_path, full_module_name),
         ):
             full_module_path = (
-                base_path / Path(*full_module_name.split(".")).with_suffix(".py")
+                base_path / Path(*full_name.split(".")).with_suffix(".py")
             ).resolve()
             if full_module_path.exists():
                 return self.utils_info[full_module_path]
@@ -376,7 +376,7 @@ def rewrite_utils(saltext_path: Path, saltext_import_name: str, res: "Migration"
         saltext_import_name=saltext_import_name, saltext_path=saltext_path, res=res
     )
     (
-        Query(saltext_path / "src")
+        Query(str(saltext_path / "src"))
         .select("""
             (
                 dunder_call=power<
