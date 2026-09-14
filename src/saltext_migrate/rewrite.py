@@ -377,8 +377,7 @@ def rewrite_utils(saltext_path: Path, saltext_import_name: str, res: "Migration"
     )
     (
         Query(saltext_path / "src")
-        .select(
-            """
+        .select("""
             (
                 dunder_call=power<
                     '__utils__'
@@ -387,8 +386,7 @@ def rewrite_utils(saltext_path: Path, saltext_import_name: str, res: "Migration"
                     trailing=any*
                 >
             )
-            """
-        )
+            """)
         .modify(fixer.fix_dunder_utils_calls)
         .execute(write=True, interactive=False, silent=False)
     )
