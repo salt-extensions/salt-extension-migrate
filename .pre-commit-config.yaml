@@ -23,16 +23,16 @@ repos:
     rev: 75992aaa40730136014f34227e0135f63fc951b4  # v3.21.2
     hooks:
       - id: pyupgrade
-        name: Rewrite code for Py3.8+
+        name: Rewrite code for Py3.10+
         args:
-          - --py38-plus
+          - --py310-plus
 
   - repo: https://github.com/PyCQA/isort
     rev: a333737ed43df02b18e6c95477ea1b285b3de15a  # 8.0.1
     hooks:
       - id: isort
         args:
-          - --py=38
+          - --py=310
           - --profile=black
 
   - repo: https://github.com/psf/black
@@ -41,4 +41,4 @@ repos:
       - id: black
         name: Autoformat Python code
         args:
-          - --target-version=py38
+          - --target-version=py310

@@ -339,7 +339,7 @@ class ExtensionMigrate:
     include: list[str] = field(default_factory=list)
     exclude: list[str] = field(default_factory=list)
     avoid_collisions: bool = False
-    data_file: Optional[Path] = None
+    data_file: Path | None = None
     non_interactive: bool = False
     base_branch: str = "3007.x"
     purge_reset: bool = False

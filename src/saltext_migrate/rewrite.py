@@ -164,7 +164,7 @@ class DunderParser(ast.NodeTransformer):  # pylint: disable=missing-class-docstr
             if not isinstance(target, ast.Name):
                 continue
             if target.id == "__virtualname__":
-                self.virtualname = node.value.s
+                self.virtualname = node.value.value
         return self.generic_visit(node)
 
     # pylint: enable=missing-function-docstring,invalid-name
